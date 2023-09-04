@@ -15,7 +15,7 @@
 //TODO:考虑将noaction处理函数和飞坡前的对准操作合在一起
 
 ImuTypeDef imu;    //储存IMU传感器相关的数据
-GimbalBackType gimbal_back_step;
+GimbalBackType gimbal_back_step;  //定义了一个名为`gimbal_back_step`的`GimbalBackType`类型的变量
 GimbalYawTypeDef gim;
 
 /*云台归中值*/
@@ -53,15 +53,22 @@ static _Bool manual_pid_flag = 1;
 //存放25帧历史姿态数据
 float angle_history[50];
 
+/**
+ * 从Gimbal_Get_information()获取gim.ctrl_mode
+ * 若为GIMBAL_INIT则云台初始化
+ * 若为GIMBAL_CLOSE_LOOP_ZGYRO则云台跟随编码器闭环控制
+ * 若为GIMBAL_AUTO则云台的自动模式
+ * 若为GIMBAL_RELAX则云台离线处理，发送零电流，将PID各参设为归中模式
+ * **/
 
 void gimbal_task(void const * argument){
     /*初始化云台控制参数*/
     Gimbal_Init_param();
-    /*获取PreviousWakeTime*/
+    /*获取PreviousWakeTime，获取当前唤醒时间（osKernelSysTick）即系统启动以来的时间，与线程作用相同*/
     uint32_t Gimbal_Wake_time = osKernelSysTick();
 
     while (1){
-        /*获取云台传感器及控制信息*/
+        /*获取云台传感器及控制信息，包含Gimbal_Get_mode，得到gim.ctrl_mode，通过几种模式相或，得到gim.ctrl_mode为GIMBAL_RELAX等其他云台的模式*/
         Gimbal_Get_information();
 
         switch (gim.ctrl_mode){
@@ -127,7 +134,8 @@ void Gimbal_Get_mode(void){
     gim.last_mode = gim.ctrl_mode;
 }
 
-
+/**
+ * 用于获取获取云台相对角度，返回tmp即中心偏移量的相对位置**/
 
 int16_t Gimbal_Get_relative_pos(int16_t raw_ecd, int16_t center_offset){
     int16_t tmp = 0;
@@ -195,7 +203,7 @@ void Gimbal_Init_handle(void){
     }
 }
 
-/*云台跟随编码器闭环控制处理函数*/
+/*云台跟随编码器闭（接收摇杆或者鼠标）环控制处理函数*/
 void Gimbal_Loop_handle(){
     /*普通模式中与自瞄模式的相互切换*/
     if(rc.sw2==RC_MI||rc.mouse.r==1){

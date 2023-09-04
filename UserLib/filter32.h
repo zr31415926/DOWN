@@ -34,8 +34,7 @@ typedef struct
     float Output;       //滤波输出的数据
     float RC;           //滤波参数 RC = 1/omegac
     float Frame_Period; //滤波的时间间隔 单位 s
-} __attribute__((__packed__)) First_Order_Filter_t;
-
+} __attribute__((__packed__)) First_Order_Filter_t;  //__attribute__((__packed__))是一个 GNU C 扩展，用于告诉编译器将结构体或联合体的成员紧密排列，以减少内存占用
 typedef struct window_filter
 {
     float Input;         //输入数据

@@ -1,0 +1,3 @@
+E:/2023rm/origin/UP/cmake-build-debug/CMakeFiles/HNU_RM_UP.elf.dir
+E:/2023rm/origin/UP/cmake-build-debug/CMakeFiles/edit_cache.dir
+E:/2023rm/origin/UP/cmake-build-debug/CMakeFiles/rebuild_cache.dir

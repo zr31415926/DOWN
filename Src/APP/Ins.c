@@ -35,6 +35,22 @@ static void IMU_Param_Correction(ImuParamTypeDef *param, float gyro[3], float ac
 
 uint8_t target_temp = 40;
 
+/**
+ * 检查加速度计读数的大小与预期重力范数之间的差异是否小于 1
+ * 如果是，则使用加速度计数据初始化 AHRS
+ * 为 IMU_param 结构设置一些初始值
+ * 包括加速度计和陀螺仪的比例因子，以及初始偏航角、俯仰角和滚动角
+ * 使用“IMU_QuaternionEKF_Init”函数初始化扩展卡尔曼滤波器 (EKF),以进行基于四元数的方向估计
+ * 使用“PID_Init”函数初始化用于温度控制的PID 控制器
+ * 使用“HAL_TIM_PWM_Start”函数在 TIM10 通道 1 上启动 PWM（脉冲宽度调制）信号
+ * 它使用“HAL_TIM_PWM_Start”函数在 TIM10 通道 1 上启动 PWM（脉冲宽度调制）信号
+ * 使用当前系统时钟周期初始化变量“ins_wake_time”
+ * 使用名为“DWT_GetDeltaT”的函数计算时间差“dt”，并将变量“t”增加“dt”
+ * 根据加速度计数据计算角度“atanxz”和“atanyz”
+ * 使用“Quaternion_AHRS_UpdateIMU”和“IMU_QuaternionEKF_Update”函数更新基于四元数的方向估计
+ * 将陀螺仪、加速度计、四元数、偏航、俯仰、滚转和偏航总角度数据从EKF结构复制到“ins”结构
+ * 将“ins_tx”结构复制到“ins_tx_buffer”数组并设置“ins_tx_size”变量
+ * 使用“ins”结构中的加速度计、陀螺仪和方向数据更新“imu”结构**/
 void ins_task(void const * argument)
 {
     /* USER CODE BEGIN InsTask */
@@ -194,6 +210,10 @@ void EularAngleToQuaternion(float Yaw, float Pitch, float Roll, float *q)
     q[3] = cosPitch * cosRoll * sinYaw - sinPitch * sinRoll * cosYaw;
 }
 
+/**
+ * 将四元数（Quaternion）数据帧插入到一个名为qBuf的QuaternionBufTypeDef类型的缓冲区中
+ * 同时，接收一个包含四元数每个分量的浮点数数组q和一个时间戳 time_stamp
+ * **/
 void InsertQuaternionFrame(QuaternionBufTypeDef *qBuf, float *q, float time_stamp)
 {
     if (qBuf->LatestNum == Q_FRAME_LEN - 1)
@@ -206,6 +226,8 @@ void InsertQuaternionFrame(QuaternionBufTypeDef *qBuf, float *q, float time_stam
         qBuf->qFrame[qBuf->LatestNum].q[i] = q[i];
 }
 
+/**
+ * 在名为 qBuf 的 QuaternionBufTypeDef 类型的缓冲区中查找时间戳最接近给定时间戳 match_time_stamp 的四元数数据帧**/
 uint16_t FindTimeMatchFrame(QuaternionBufTypeDef *qBuf, float match_time_stamp)
 {
     float min_time_error = fabsf(qBuf->qFrame[0].TimeStamp - match_time_stamp);
@@ -220,6 +242,25 @@ uint16_t FindTimeMatchFrame(QuaternionBufTypeDef *qBuf, float match_time_stamp)
     }
     return num;
 }
+/**
+ * 载体坐标系（b系）
+ * 原点：与载体质心重合
+
+* X轴：沿载体横轴向右
+
+* Y轴：沿载体纵轴向前
+
+* Z轴：沿载体竖轴向上
+ * 地球坐标系（e系）
+* 地球坐标系随地球转动
+
+* 原点：地心
+
+* Z轴：沿地球自转轴方向
+
+* X轴：赤道平面内，与零度子午线相交
+
+* Y轴：与X、Z轴形成右手坐标系**/
 
 /**
  * @brief          Transform 3dvector from BodyFrame to EarthFrame
@@ -263,6 +304,9 @@ void EarthFrameToBodyFrame(const float *vecEF, float *vecBF, float *q)
                        (0.5f - q[1] * q[1] - q[2] * q[2]) * vecEF[2]);
 }
 
+/**
+ * 校正陀螺仪和加速度计数据
+ * **/
 static void IMU_Param_Correction(ImuParamTypeDef *param, float gyro[3], float accel[3])
 {
     static float lastYawOffset, lastPitchOffset, lastRollOffset;

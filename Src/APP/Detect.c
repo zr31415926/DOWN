@@ -17,18 +17,18 @@ static uint16_t err_count;
 
 
 /**
-  * @brief     初始化离线设备检测数据结构
+  * @brief     初始化离线设备检测数据结构，全局错误检测器的初始化
   */
 void GlobalErr_Detector_init(void)
 {
     glb_err.err_now = NULL;
 
-    glb_err.err_list[REMOTE_CTRL_OFFLINE].err_exist   = 0;
-    glb_err.err_list[REMOTE_CTRL_OFFLINE].warn_pri    = 10;  //max priority
-    glb_err.err_list[REMOTE_CTRL_OFFLINE].set_timeout = 100; //ms
-    glb_err.err_list[REMOTE_CTRL_OFFLINE].delta_time  = 0;
-    glb_err.err_list[REMOTE_CTRL_OFFLINE].last_time   = 0x00;
-    glb_err.err_list[REMOTE_CTRL_OFFLINE].enable      = 1;
+    glb_err.err_list[REMOTE_CTRL_OFFLINE].err_exist   = 0;  //错误存在
+    glb_err.err_list[REMOTE_CTRL_OFFLINE].warn_pri    = 10;  //max priority  线程为10
+    glb_err.err_list[REMOTE_CTRL_OFFLINE].set_timeout = 100; //ms  超时时间
+    glb_err.err_list[REMOTE_CTRL_OFFLINE].delta_time  = 0;  //阈值
+    glb_err.err_list[REMOTE_CTRL_OFFLINE].last_time   = 0x00;  //延迟时间
+    glb_err.err_list[REMOTE_CTRL_OFFLINE].enable      = 1;  //状态：启用
 
     glb_err.err_list[GIMBAL_PIT_OFFLINE].err_exist   = 0;
     glb_err.err_list[GIMBAL_PIT_OFFLINE].warn_pri    = 10;
@@ -64,7 +64,7 @@ void GlobalErr_Detector_init(void)
 }
 
 /**
-  * @brief     record the detected module return time to judge offline
+  * @brief     record the detected module return time to judge offline 检查两次错误之间的时间间隔，在错误发生时更新错误列表中的相关信息
   * @param     err_id: module id
   * @retval    None
   * @usage     used in CAN/usart.. rx interrupt callback
@@ -135,7 +135,12 @@ void detect_task(const void* argu)
     }
 }
 
-
+/**
+ * 回调函数：Module_Offline_callback
+ * 当某些模块出现离线错误时，该函数被调用
+ * 函数的主要作用是处理各种离线错误，并根据错误次数进行相应的操作
+ * 如控制 LED 灯和蜂鸣器
+ * **/
 void Module_Offline_callback(void)
 {
     err_count++;
